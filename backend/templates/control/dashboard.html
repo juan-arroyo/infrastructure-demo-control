@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}// Control Room{% endblock %}
+
+{% block content %}
+<div class="min-h-screen p-8 relative">
+
+    <!-- Background image — same datacenter aesthetic as login for visual consistency -->
+    <div class="fixed inset-0" style="
+        background-image: url('/static/2.jpg');
+        background-size: cover;
+        background-position: center;
+        filter: brightness(0.3);
+        z-index: 0;
+    "></div>
+
+    <!-- Content wrapper — sits above the background image -->
+    <div class="relative z-10">
+
+        <!-- Header -->
+        <div class="mb-8">
+            <p style="color: var(--accent-green); font-size: 11px; letter-spacing: 4px;">
+                // INFRASTRUCTURE CONTROL ROOM
+            </p>
+            <h1 class="text-3xl font-bold mt-1" style="letter-spacing: 2px;">
+                DASHBOARD
+            </h1>
+            <p style="color: var(--text-muted); font-size: 11px; margin-top: 4px;">
+                Logged in as: <span style="color: var(--accent-green);">{{ request.user.username }}</span>
+                {% if request.user.is_staff %}
+                <span style="color: var(--accent-blue); margin-left: 8px;">[ ADMIN ]</span>
+                {% else %}
+                <span style="color: var(--text-muted); margin-left: 8px;">[ RECRUITER ]</span>
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Placeholder content — replaced with real widgets in next steps -->
+        <div class="p-6" style="
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent-green);
+        ">
+            <p style="color: var(--accent-green); font-size: 12px;">
+                ▸ Dashboard online. Next step: cluster status widgets.
+            </p>
+        </div>
+
+        <!-- Logout -->
+        <div class="mt-8">
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    style="
+                        background: transparent;
+                        border: 1px solid var(--text-muted);
+                        color: var(--text-muted);
+                        font-family: var(--mono);
+                        font-size: 11px;
+                        letter-spacing: 2px;
+                        padding: 6px 16px;
+                        cursor: pointer;
+                    "
+                    onmouseover="this.style.borderColor='var(--accent-red)'; this.style.color='var(--accent-red)'"
+                    onmouseout="this.style.borderColor='var(--text-muted)'; this.style.color='var(--text-muted)'"
+                >
+                    // DISCONNECT
+                </button>
+            </form>
+        </div>
+
+    </div><!-- end content wrapper -->
+
+</div>
+{% endblock %}

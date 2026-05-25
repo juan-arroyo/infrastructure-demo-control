@@ -82,10 +82,16 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = '/app/staticfiles'
+# Tell Django where to find static files in development
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Redirect to dashboard after login instead of default /accounts/profile/
 LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/login/'
+
+# Redirect to login page after logout instead of default Django admin logout page
+LOGOUT_REDIRECT_URL = '/login/'

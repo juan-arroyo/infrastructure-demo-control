@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Control Room{% endblock %}</title>
+    <!-- Tailwind CSS via CDN — no build step needed for development -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- DaisyUI component library on top of Tailwind -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
+    <style>
+        /* Cyberpunk color palette — applied globally across all pages */
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-surface: #111118;
+            --border: #1e1e2e;
+            --accent-green: #00ff88;
+            --accent-blue: #0088ff;
+            --accent-red: #ff3355;
+            --text-primary: #e8e8f0;
+            --text-muted: #555570;
+            --mono: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--mono);
+        }
+    </style>
+</head>
+<body>
+    {% block content %}
+    {% endblock %}
+</body>
+</html>

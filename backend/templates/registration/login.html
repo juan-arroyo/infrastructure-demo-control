@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}// RESTRICTED ACCESS{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center relative overflow-hidden">
+
+    <!-- Background image — dramatic datacenter aesthetic, covers full viewport -->
+    <div class="fixed inset-0" style="
+        background-image: url('/static/4.jpg');
+        background-size: cover;
+        background-position: center;
+        filter: brightness(0.3);
+        z-index: 0;
+    "></div>
+
+    <!-- Glow effect behind the form — draws attention to the center -->
+    <div class="absolute w-96 h-96 rounded-full" style="
+        background: radial-gradient(circle, rgba(0,255,136,0.05) 0%, transparent 70%);
+    "></div>
+
+    <!-- Login form container -->
+    <div class="relative z-10 w-full max-w-md p-8" style="
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-top: 2px solid var(--accent-green);
+    ">
+        <!-- Header -->
+        <div class="mb-8 text-center">
+            <p style="color: var(--accent-green); font-size: 11px; letter-spacing: 4px;">
+                // INFRASTRUCTURE CONTROL ROOM
+            </p>
+            <h1 class="text-2xl font-bold mt-2" style="color: var(--text-primary); letter-spacing: 2px;">
+                RESTRICTED ACCESS
+            </h1>
+            <p class="mt-1" style="color: var(--text-muted); font-size: 11px;">
+                Authorized personnel only
+            </p>
+        </div>
+
+        <!-- Error messages -->
+        {% if form.errors %}
+        <div class="mb-4 p-3" style="
+            background: rgba(255,51,85,0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            font-size: 12px;
+        ">
+            ▸ Invalid credentials. Access denied.
+        </div>
+        {% endif %}
+
+        <!-- Login form -->
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Username field -->
+            <div class="mb-4">
+                <label style="color: var(--text-muted); font-size: 11px; letter-spacing: 2px;">
+                    // USERNAME
+                </label>
+                <input 
+                    type="text" 
+                    name="username" 
+                    autofocus
+                    class="w-full mt-1 px-3 py-2 outline-none"
+                    style="
+                        background: var(--bg-primary);
+                        border: 1px solid var(--border);
+                        color: var(--accent-green);
+                        font-family: var(--mono);
+                        font-size: 14px;
+                    "
+                >
+            </div>
+
+            <!-- Password field -->
+            <div class="mb-6">
+                <label style="color: var(--text-muted); font-size: 11px; letter-spacing: 2px;">
+                    // PASSWORD
+                </label>
+                <input 
+                    type="password" 
+                    name="password"
+                    class="w-full mt-1 px-3 py-2 outline-none"
+                    style="
+                        background: var(--bg-primary);
+                        border: 1px solid var(--border);
+                        color: var(--accent-green);
+                        font-family: var(--mono);
+                        font-size: 14px;
+                    "
+                >
+            </div>
+
+            <!-- Submit button -->
+            <button 
+                type="submit"
+                class="w-full py-3 font-bold tracking-widest transition-all duration-200"
+                style="
+                    background: transparent;
+                    border: 1px solid var(--accent-green);
+                    color: var(--accent-green);
+                    font-family: var(--mono);
+                    font-size: 12px;
+                    letter-spacing: 3px;
+                "
+                onmouseover="this.style.background='rgba(0,255,136,0.1)'"
+                onmouseout="this.style.background='transparent'"
+            >
+                AUTHENTICATE →
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
