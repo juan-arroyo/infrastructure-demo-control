@@ -1,0 +1,22 @@
+# Environment variables — contain secrets, never go to GitHub
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+staticfiles/
+
+# Docker
+postgres_data/
+
+# VSCode
+.vscode/
+
+# Sensitive files
+*secrets*

@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: control_db
+      POSTGRES_USER: control_user
+      # Dev credentials only — production secrets live in Pi environment variables, never in code
+      POSTGRES_PASSWORD: control_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    # Redis acts as the channel layer for Django Channels — required for WebSocket message routing between processes
+    image: redis:7-alpine
+
+  web:
+    build: ./backend
+    env_file:
+      # Load environment variables from .env file — never commit .env to GitHub
+      - .env
+    # Wait for PostgreSQL to be ready before starting Django — prevents connection refused on startup
+    command: >
+      sh -c "while ! nc -z db 5432; do sleep 1; done &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      # Mount source code so changes reflect immediately without rebuilding the image
+      - ./backend:/app
+    ports:
+      - "8001:8000"
+    environment:
+      - DEBUG=True
+      - DB_NAME=control_db
+      - DB_USER=control_user
+      - DB_PASSWORD=control_pass
+      - DB_HOST=db
+      - DB_PORT=5432
+      # Redis URL for Django Channels channel layer
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres_data:

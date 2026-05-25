@@ -1,0 +1,10 @@
+Django==5.1.4
+channels==4.1.0
+channels-redis==4.2.0
+daphne==4.1.2
+hcloud==2.3.0
+ansible-runner==2.4.0
+python-decouple==3.8
+psycopg2-binary==2.9.9
+gunicorn==21.2.0
+whitenoise==6.7.0
