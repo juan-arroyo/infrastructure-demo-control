@@ -136,10 +136,10 @@ def _build_public_net(primary_ip_obj):
     Builds the public_net parameter required by the Hetzner API to assign a Primary IP.
     Extracted to a helper because the data structure is verbose and would clutter create_cluster.
     """
-    from hcloud.servers.client import CreateServerPublicNetwork
+    from hcloud.servers.domain import ServerCreatePublicNetwork
     from hcloud.primary_ips.domain import PrimaryIP
 
-    return CreateServerPublicNetwork(
+    return ServerCreatePublicNetwork(
         ipv4=primary_ip_obj,
         enable_ipv6=False,  # IPv6 not needed — cluster communication is IPv4 only
     )
