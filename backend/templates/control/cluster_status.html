@@ -1,0 +1,32 @@
+<!-- Partial template — returned by cluster_status view and injected by HTMX -->
+<!-- Not a full page — no base.html extension, just the fragment -->
+<div style="display: flex; gap: 16px; flex-wrap: wrap;">
+    {% for node in nodes %}
+    <div style="
+        flex: 1;
+        min-width: 200px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-left: 3px solid {% if node.status == 'running' %}var(--accent-green){% else %}var(--accent-red){% endif %};
+        padding: 16px;
+    ">
+        <p style="
+            color: {% if node.status == 'running' %}var(--accent-green){% else %}var(--accent-red){% endif %};
+            font-size: 10px;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        ">
+            {% if node.status == 'running' %}● ONLINE{% else %}● OFFLINE{% endif %}
+        </p>
+        <p style="font-size: 14px; font-weight: bold; margin-bottom: 2px;">
+            {{ node.name }}
+        </p>
+        <p style="color: var(--text-muted); font-size: 11px; margin-bottom: 4px;">
+            {{ node.role }}
+        </p>
+        <p style="color: var(--text-muted); font-size: 10px; font-family: var(--mono);">
+            {{ node.ip }}
+        </p>
+    </div>
+    {% endfor %}
+</div>

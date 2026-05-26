@@ -10,5 +10,7 @@ urlpatterns = [
     path('', include('django.contrib.auth.urls')),
     # Our apps
     path('', include('control.urls')),
+    # Cluster operations — trigger_destroy endpoint used by the dashboard button
+    path('deploy/', include('deploy.urls')),
 # Serve static files in development — in production Nginx handles this
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

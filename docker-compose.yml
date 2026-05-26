@@ -2,10 +2,10 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: control_db
-      POSTGRES_USER: control_user
-      # Dev credentials only — production secrets live in Pi environment variables, never in code
-      POSTGRES_PASSWORD: control_pass
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      # Dev credentials loaded from .env — never hardcode credentials in source code
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -21,22 +21,13 @@ services:
     # Wait for PostgreSQL to be ready before starting Django — prevents connection refused on startup
     command: >
       sh -c "while ! nc -z db 5432; do sleep 1; done &&
-             python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+            python manage.py migrate &&
+            daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     volumes:
       # Mount source code so changes reflect immediately without rebuilding the image
       - ./backend:/app
     ports:
       - "8001:8000"
-    environment:
-      - DEBUG=True
-      - DB_NAME=control_db
-      - DB_USER=control_user
-      - DB_PASSWORD=control_pass
-      - DB_HOST=db
-      - DB_PORT=5432
-      # Redis URL for Django Channels channel layer
-      - REDIS_URL=redis://redis:6379
     depends_on:
       - db
       - redis

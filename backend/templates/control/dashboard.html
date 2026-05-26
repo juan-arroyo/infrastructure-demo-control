@@ -5,7 +5,7 @@
 {% block content %}
 <div class="min-h-screen p-8 relative">
 
-    <!-- Background image — same datacenter aesthetic as login for visual consistency -->
+    <!-- Background image -->
     <div class="fixed inset-0" style="
         background-image: url('/static/2.jpg');
         background-size: cover;
@@ -14,7 +14,6 @@
         z-index: 0;
     "></div>
 
-    <!-- Content wrapper — sits above the background image -->
     <div class="relative z-10">
 
         <!-- Header -->
@@ -22,28 +21,139 @@
             <p style="color: var(--accent-green); font-size: 11px; letter-spacing: 4px;">
                 // INFRASTRUCTURE CONTROL ROOM
             </p>
-            <h1 class="text-3xl font-bold mt-1" style="letter-spacing: 2px;">
-                DASHBOARD
-            </h1>
+            <h1 class="text-3xl font-bold mt-1" style="letter-spacing: 2px;">DASHBOARD</h1>
             <p style="color: var(--text-muted); font-size: 11px; margin-top: 4px;">
                 Logged in as: <span style="color: var(--accent-green);">{{ request.user.username }}</span>
                 {% if request.user.is_staff %}
-                <span style="color: var(--accent-blue); margin-left: 8px;">[ ADMIN ]</span>
+                    <span style="color: var(--accent-blue); margin-left: 8px;">[ ADMIN ]</span>
                 {% else %}
-                <span style="color: var(--text-muted); margin-left: 8px;">[ RECRUITER ]</span>
+                    <span style="color: var(--text-muted); margin-left: 8px;">[ RECRUITER ]</span>
                 {% endif %}
             </p>
         </div>
 
-        <!-- Placeholder content — replaced with real widgets in next steps -->
-        <div class="p-6" style="
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-left: 3px solid var(--accent-green);
-        ">
-            <p style="color: var(--accent-green); font-size: 12px;">
-                ▸ Dashboard online. Next step: cluster status widgets.
+        <!-- Cluster status — one card per VPS -->
+        <!-- hx-get polls the status endpoint every 10 seconds without reloading the page -->
+        <!-- hx-trigger="load, every 10s" means: fetch on page load AND every 10 seconds after -->
+        <div class="mb-8">
+            <p style="color: var(--text-muted); font-size: 10px; letter-spacing: 3px; margin-bottom: 12px;">
+                // CLUSTER STATUS
             </p>
+            <div id="cluster-status"
+                 hx-get="{% url 'control:cluster_status' %}"
+                 hx-trigger="load, every 10s"
+                 hx-swap="innerHTML">
+                <!-- HTMX replaces this content with the response from cluster_status view -->
+                <p style="color: var(--text-muted); font-size: 12px;">Loading cluster status...</p>
+            </div>
+        </div>
+
+        <!-- Destruction button — only rendered for admin users -->
+        <!-- Hiding it in the template AND checking in the view = two layers of protection -->
+        {% if request.user.is_staff %}
+        <div class="mb-8">
+            <p style="color: var(--text-muted); font-size: 10px; letter-spacing: 3px; margin-bottom: 12px;">
+                // DISASTER RECOVERY
+            </p>
+            <div style="
+                background: var(--bg-surface);
+                border: 1px solid var(--border);
+                border-left: 3px solid var(--accent-red);
+                padding: 24px;
+            ">
+                <p style="color: var(--accent-red); font-size: 11px; letter-spacing: 2px; margin-bottom: 8px;">
+                    ⚠️  DESTRUCTIVE OPERATION
+                </p>
+                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px;">
+                    Destroys all 3 VPS, rebuilds from scratch, restores database from last backup.
+                    The Survivor will be offline for approximately 10-15 minutes.
+                </p>
+
+                <!-- Confirmation dialog — shown before the actual trigger -->
+                <!-- onclick toggles the confirm panel instead of triggering directly -->
+                <button
+                    id="destroy-btn"
+                    onclick="document.getElementById('confirm-panel').style.display='block'; this.style.display='none';"
+                    style="
+                        background: transparent;
+                        border: 2px solid var(--accent-red);
+                        color: var(--accent-red);
+                        font-family: var(--mono);
+                        font-size: 13px;
+                        letter-spacing: 3px;
+                        padding: 12px 32px;
+                        cursor: pointer;
+                        text-transform: uppercase;
+                    "
+                    onmouseover="this.style.background='rgba(255,59,48,0.1)'"
+                    onmouseout="this.style.background='transparent'"
+                >
+                    💀 INITIATE DISASTER RECOVERY
+                </button>
+
+                <!-- Confirmation panel — hidden until button is clicked -->
+                <div id="confirm-panel" style="display: none;">
+                    <p style="color: var(--accent-red); font-size: 12px; margin-bottom: 16px;">
+                        Are you sure? This will destroy the entire cluster.
+                    </p>
+                    <div style="display: flex; gap: 12px;">
+                        <!-- Confirm button — HTMX posts to trigger_destroy and shows the log terminal -->
+                        <button
+                            hx-post="{% url 'deploy_trigger' %}"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            hx-on::after-request="document.getElementById('log-terminal').style.display='block'; document.getElementById('confirm-panel').style.display='none';"
+                            style="
+                                background: var(--accent-red);
+                                border: none;
+                                color: white;
+                                font-family: var(--mono);
+                                font-size: 12px;
+                                letter-spacing: 2px;
+                                padding: 10px 24px;
+                                cursor: pointer;
+                            "
+                        >
+                            ✅ CONFIRM — DESTROY EVERYTHING
+                        </button>
+                        <!-- Cancel button — hides the confirm panel and shows the destroy button again -->
+                        <button
+                            onclick="document.getElementById('confirm-panel').style.display='none'; document.getElementById('destroy-btn').style.display='block';"
+                            style="
+                                background: transparent;
+                                border: 1px solid var(--text-muted);
+                                color: var(--text-muted);
+                                font-family: var(--mono);
+                                font-size: 12px;
+                                letter-spacing: 2px;
+                                padding: 10px 24px;
+                                cursor: pointer;
+                            "
+                        >
+                            CANCEL
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Log terminal — hidden until disaster recovery starts -->
+        <div id="log-terminal" style="display: none; margin-bottom: 32px;">
+            <p style="color: var(--text-muted); font-size: 10px; letter-spacing: 3px; margin-bottom: 12px;">
+                // LIVE OPERATION LOG
+            </p>
+            <div style="
+                background: #000;
+                border: 1px solid var(--accent-green);
+                padding: 20px;
+                font-family: var(--mono);
+                font-size: 12px;
+                min-height: 200px;
+                max-height: 400px;
+                overflow-y: auto;
+            ">
+                <div id="log-output"></div>
+            </div>
         </div>
 
         <!-- Logout -->
@@ -71,6 +181,21 @@
         </div>
 
     </div><!-- end content wrapper -->
-
 </div>
+
+<!-- WebSocket connection for live log streaming -->
+<!-- Maximum 10 lines of JavaScript as per project principles -->
+<script>
+    // Use wss:// (secure) in production, ws:// in local development
+    // window.location.protocol returns 'https:' or 'http:' — we derive the WebSocket protocol from it
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/deploy/logs/`);
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        const log = document.getElementById('log-output');
+        log.innerHTML += `<p style="color: var(--accent-green); margin: 2px 0;">▸ ${data.message}</p>`;
+        log.scrollTop = log.scrollHeight;
+    };
+</script>
+
 {% endblock %}
