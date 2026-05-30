@@ -1,36 +1,68 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
+      # PostgreSQL requires its own variable names — map from the .env variables
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
-      # Dev credentials loaded from .env — never hardcode credentials in source code
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
+    networks:
+      control_default:
+        ipv4_address: 192.168.17.2
 
   redis:
-    # Redis acts as the channel layer for Django Channels — required for WebSocket message routing between processes
+    # Redis is required by Django Channels as the channel layer
+    # — routes WebSocket messages between processes in production
     image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      control_default:
+        ipv4_address: 192.168.17.3
 
   web:
     build: ./backend
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
     env_file:
-      # Load environment variables from .env file — never commit .env to GitHub
       - .env
-    # Wait for PostgreSQL to be ready before starting Django — prevents connection refused on startup
     command: >
       sh -c "while ! nc -z db 5432; do sleep 1; done &&
-            python manage.py migrate &&
-            daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     volumes:
-      # Mount source code so changes reflect immediately without rebuilding the image
-      - ./backend:/app
-    ports:
-      - "8001:8000"
+      - ./static:/app/staticfiles
     depends_on:
       - db
       - redis
+    networks:
+      control_default:
+        ipv4_address: 192.168.17.4
 
-volumes:
-  postgres_data:
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "8084:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./static:/app/staticfiles
+    depends_on:
+      - web
+    networks:
+      control_default:
+        ipv4_address: 192.168.17.5
+
+networks:
+  control_default:
+    name: control_default
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.17.0/24

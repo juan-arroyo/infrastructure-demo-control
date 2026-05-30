@@ -82,13 +82,14 @@ def create_cluster(log):
     """
     Creates three new servers with the same specs as the original cluster.
     Assigns the reserved Primary IPs so DNS and kubeconfig remain valid after rebuild.
-
     log: callable that accepts a string — same pattern as destroy_cluster
     """
+    import socket
+
     log('⏳ Waiting before creating new servers...')
-    # Brief pause after destruction — Hetzner needs a moment to release resources
-    # before the same Primary IPs can be reassigned to new servers
-    time.sleep(5)
+    # Hetzner needs time to fully release the Primary IPs after destruction
+    # — without this pause, the API returns 'primary_ip_assigned' error
+    time.sleep(30)
 
     # Fetch the SSH key object — required by the Hetzner API when creating servers
     ssh_key = client.ssh_keys.get_by_name(SSH_KEY_NAME)
@@ -114,9 +115,30 @@ def create_cluster(log):
         log(f'✅ {server_def["name"]} created')
 
     log('🖥️  All servers created — waiting for SSH to become available...')
-    # Hetzner reports servers as running before SSH daemon is fully ready
-    # — without this pause, Ansible would fail to connect on the first attempt
-    time.sleep(30)
+
+    # Actively poll SSH on each server instead of a fixed sleep
+    # — a fixed sleep is unreliable because boot time varies between servers
+    # — this loop only continues when all 3 servers are actually ready
+    for server_def in SERVERS:
+        ip = PRIMARY_IPS[server_def['name']]
+        log(f'⏳ Waiting for SSH on {server_def["name"]} ({ip})...')
+
+        # Try every 5 seconds for up to 5 minutes (60 attempts)
+        # — 5 minutes is generous but Hetzner VPS rarely take longer than 2
+        for attempt in range(60):
+            try:
+                # Try to open a TCP connection to port 22
+                # — if it succeeds, SSH daemon is up and Ansible can connect
+                sock = socket.create_connection((ip, 22), timeout=5)
+                sock.close()
+                log(f'✅ SSH ready on {server_def["name"]}')
+                break
+            except (socket.timeout, ConnectionRefusedError, OSError):
+                # Not ready yet — wait 5 seconds and try again
+                time.sleep(5)
+        else:
+            # The for loop completed without breaking — SSH never responded
+            raise Exception(f'SSH timeout on {server_def["name"]} after 5 minutes')
 
 
 def _get_primary_ip(ip_address):

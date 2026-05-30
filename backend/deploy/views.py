@@ -4,6 +4,7 @@
 
 import threading
 import ansible_runner
+from decouple import config
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -41,19 +42,41 @@ def trigger_provisioning(log):
     this Django app. ansible-runner executes it locally, not via SSH to another machine.
     """
     import os
+    import tempfile
 
     log('⚙️  Triggering Ansible provisioning...')
 
     # Path to the ansible directory inside the cloned repo on the Pi
-    ansible_dir = os.path.expanduser('~/job-tracker/ansible')
+    ansible_dir = config('ANSIBLE_DIR')
 
-    result = ansible_runner.run(
-        private_data_dir=ansible_dir,
-        playbook='provision.yml',
-        # Vault password loaded from environment — never hardcode secrets in source code
-        cmdline=f'--vault-password-file <(echo {os.environ.get("ANSIBLE_VAULT_PASSWORD", "")})',
-        event_handler=lambda event: _handle_ansible_event(event, log),
-    )
+    # ansible-runner does not run through bash, so bash features like <(echo ...)
+    # do not work. The standard solution is to write the password to a temporary
+    # file and pass the file path — ansible-playbook reads it and deletes nothing,
+    # so we clean it up manually after the run.
+    vault_password = os.environ.get('ANSIBLE_VAULT_PASSWORD', '')
+    vault_pass_file = None
+
+    try:
+        # delete=False because ansible-runner needs to read the file after we close it
+        # — if delete=True, the file disappears as soon as the 'with' block ends
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write(vault_password)
+            vault_pass_file = f.name
+
+        result = ansible_runner.run(
+            private_data_dir=ansible_dir,
+            playbook='provision.yml',
+            # inventory-provision.ini contains the 3 Hetzner VPS IPs and SSH config
+            # — without this, ansible-runner only sees implicit localhost and skips all plays
+            cmdline=f'--inventory inventory-provision.ini --vault-password-file {vault_pass_file}',
+            event_handler=lambda event: _handle_ansible_event(event, log),
+        )
+
+    finally:
+        # Always delete the temp file — even if ansible-runner crashes
+        # Leaving a plaintext password on disk, even temporarily, is a security risk
+        if vault_pass_file and os.path.exists(vault_pass_file):
+            os.unlink(vault_pass_file)
 
     if result.rc == 0:
         log('✅ Provisioning completed successfully.')

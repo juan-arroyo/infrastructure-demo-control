@@ -4,9 +4,11 @@ WORKDIR /app
 
 # netcat-openbsd needed to wait for PostgreSQL before Django starts — prevents race condition on docker compose up
 # gcc needed to compile psycopg2 binary extensions
+# ansible needed to run provision.yml via ansible-runner — the container acts as the Ansible controller
 RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     gcc \
+    ansible \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker layer caching — dependencies only reinstall when requirements.txt changes
