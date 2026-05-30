@@ -91,8 +91,12 @@ def create_cluster(log):
     # — without this pause, the API returns 'primary_ip_assigned' error
     time.sleep(30)
 
-    # Fetch the SSH key object — required by the Hetzner API when creating servers
-    ssh_key = client.ssh_keys.get_by_name(SSH_KEY_NAME)
+    # Fetch all authorized SSH keys — injected into every new server on creation
+    ssh_keys = [
+        client.ssh_keys.get_by_name('Key-Pi'),
+        client.ssh_keys.get_by_name('Key-Ubuntu-Pc'),
+        client.ssh_keys.get_by_name('Key-Ubuntu-Nb'),
+    ]
 
     for server_def in SERVERS:
         log(f'🔨 Building {server_def["name"]}...')
@@ -107,7 +111,7 @@ def create_cluster(log):
             server_type=ServerType(name=server_def['type']),
             image=Image(name='ubuntu-22.04'),
             location=client.locations.get_by_name(server_def['location']),
-            ssh_keys=[ssh_key],
+            ssh_keys=ssh_keys,
             # Assign the reserved Primary IP — keeps the same public IP after rebuild
             public_net=_build_public_net(primary_ip_obj),
         )
