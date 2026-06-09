@@ -1,5 +1,8 @@
 # Infrastructure Demo Control — The Control Room
 
+![Live](https://img.shields.io/badge/Live-control.jmarroyo.es-brightgreen)
+![Stack](https://img.shields.io/badge/Stack-Django%20%7C%20K3s%20%7C%20Ansible%20%7C%20WebSockets-blue)
+
 A Django application for orchestrating the full lifecycle of a 3-node K3s cluster on
 Hetzner Cloud: provisioning, real-time status monitoring, and one-button disaster recovery
 with live log streaming over WebSockets.
