@@ -1,4 +1,4 @@
-# infrastructure-demo-control — The Control Room
+# Infrastructure Demo Control — The Control Room
 
 A Django application for orchestrating the full lifecycle of a 3-node K3s cluster on
 Hetzner Cloud: provisioning, real-time status monitoring, and one-button disaster recovery
