@@ -13,25 +13,32 @@ import time
 # Read the API token from environment — never hardcode credentials in source code
 client = Client(token=config('HETZNER_API_TOKEN'))
 
-# Server definitions — same specs as the original cluster built in Module 3
+# Server definitions — same names and location as the original cluster built in Module 3
 # Using a list of dicts so adding or removing nodes requires changing one place only
+# Location must stay hel1: the reserved Primary IPs belong to Helsinki and cannot move
 SERVERS = [
     {
         'name': 'k3s-server',
-        'type': 'cx23',
         'location': 'hel1',
     },
     {
         'name': 'k3s-agent-1',
-        'type': 'cx23',
         'location': 'hel1',
     },
     {
         'name': 'k3s-agent-2',
-        'type': 'cx23',
         'location': 'hel1',
     },
 ]
+
+# Server types to try, in order of preference (prices: Hetzner API, hel1, Nov 2026, excl. VAT)
+#   cx23  — 2 vCPU / 4 GB, €0.0088/h — cheapest, but often out of stock in 2026
+#   cpx22 — 2 vCPU / 4 GB, €0.0312/h — same resources as cx23, the direct replacement
+#   cpx32 — 4 vCPU / 8 GB, €0.0569/h — second fallback
+#   ccx13 — 2 dedicated vCPU / 8 GB, €0.0689/h — last resort
+# Only x86 types: the GitHub runner download (x64) and the Docker image (amd64) are x86-only,
+# so ARM 'cax' types would break provisioning. 1 GB types (cpx02) are too small for K3s + PostgreSQL.
+SERVER_TYPE_PREFERENCE = ['cx23', 'cpx22', 'cpx32', 'ccx13']
 
 # Primary IPs are reserved in Hetzner — auto_delete is disabled so they survive
 # a full cluster destruction. We reassign them on creation to keep DNS records intact.
@@ -45,6 +52,41 @@ PRIMARY_IPS = {
 # SSH key name as registered in Hetzner — injected automatically on server creation
 # The key must already exist in Hetzner Security → SSH Keys before running this
 SSH_KEY_NAME = config('HETZNER_SSH_KEY_NAME')
+
+
+def pick_server_type(log, location='hel1'):
+    """
+    Pre-flight check: returns the first type of SERVER_TYPE_PREFERENCE that Hetzner can
+    create right now in the given location, or raises if none is available.
+
+    MUST run BEFORE destroy_cluster — otherwise the cluster could be destroyed and then
+    fail to rebuild because the server type is out of stock.
+
+    Uses the raw API on purpose: since 2026 availability lives in
+    server_types[].locations[].available, a field the pinned hcloud 2.3.0 library
+    does not know (the old /datacenters endpoint was removed by Hetzner).
+    """
+    log(f'🔎 Checking server type availability in {location}...')
+
+    types = client.request('GET', '/server_types', params={'per_page': 50})['server_types']
+    by_name = {t['name']: t for t in types}
+
+    for name in SERVER_TYPE_PREFERENCE:
+        server_type = by_name.get(name)
+        # Find this type's entry for our location (None if the type is not offered there)
+        loc = next((l for l in (server_type or {}).get('locations', []) if l.get('name') == location), None)
+
+        if loc and loc.get('available'):
+            log(f'✅ Using server type {name}')
+            return name
+
+        log(f'⚠️  {name} not available in {location} — trying the next one')
+
+    # Nothing available: stop here, BEFORE anything has been destroyed
+    raise Exception(
+        f'No server type available in {location} '
+        f'(tried {", ".join(SERVER_TYPE_PREFERENCE)}) — cluster left untouched'
+    )
 
 
 def destroy_cluster(log):
@@ -78,11 +120,12 @@ def destroy_cluster(log):
     log('⚰️  Cluster destroyed. Total silence.')
 
 
-def create_cluster(log):
+def create_cluster(log, server_type):
     """
-    Creates three new servers with the same specs as the original cluster.
+    Creates the three cluster servers with the given server type (chosen by pick_server_type).
     Assigns the reserved Primary IPs so DNS and kubeconfig remain valid after rebuild.
     log: callable that accepts a string — same pattern as destroy_cluster
+    server_type: Hetzner server type name, e.g. 'cx23' or 'cpx22'
     """
     import socket
 
@@ -99,7 +142,7 @@ def create_cluster(log):
     ]
 
     for server_def in SERVERS:
-        log(f'🔨 Building {server_def["name"]}...')
+        log(f'🔨 Building {server_def["name"]} ({server_type})...')
 
         # Look up the reserved Primary IP for this server by its fixed IP address
         # — Primary IPs are Hetzner resources independent of servers, so they must
@@ -108,7 +151,7 @@ def create_cluster(log):
 
         client.servers.create(
             name=server_def['name'],
-            server_type=ServerType(name=server_def['type']),
+            server_type=ServerType(name=server_type),
             image=Image(name='ubuntu-22.04'),
             location=client.locations.get_by_name(server_def['location']),
             ssh_keys=ssh_keys,

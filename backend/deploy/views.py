@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from .hetzner import destroy_cluster, create_cluster
+from .hetzner import pick_server_type, destroy_cluster, create_cluster
 
 
 # Only ONE cluster operation (disaster recovery or backup) may run at a time.
@@ -147,11 +147,15 @@ def run_disaster_recovery():
     blocking the Django request cycle would timeout the browser connection.
     """
     try:
+        # Step 0 — pre-flight: make sure a server type is in stock BEFORE destroying anything.
+        # If none is available, pick_server_type raises and the cluster is left untouched.
+        server_type = pick_server_type(log=broadcast_log)
+
         # Step 1 — destroy the existing cluster
         destroy_cluster(log=broadcast_log)
 
-        # Step 2 — recreate the cluster with the same specs and reserved IPs
-        create_cluster(log=broadcast_log)
+        # Step 2 — recreate the cluster with the chosen server type and reserved IPs
+        create_cluster(log=broadcast_log, server_type=server_type)
 
         # Step 3 — trigger Ansible provisioning on the Pi
         trigger_provisioning(log=broadcast_log)
