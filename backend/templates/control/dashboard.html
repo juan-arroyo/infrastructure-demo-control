@@ -72,10 +72,12 @@
 
                 <!-- No confirmation step: a backup destroys nothing, it only refreshes the latest copy -->
                 <!-- hx-disabled-elt disables the button while the request is being sent (no double clicks) -->
+                <!-- hx-swap="none": the JSON response is NOT pasted into the button (HTMX default would) -->
                 <!-- After the request: show the log terminal, and the busy warning only on 409 Conflict -->
                 <button
                     hx-post="{% url 'deploy_backup' %}"
                     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                    hx-swap="none"
                     hx-disabled-elt="this"
                     hx-on::after-request="document.getElementById('log-terminal').style.display='block'; document.getElementById('busy-msg').style.display = event.detail.xhr.status === 409 ? 'block' : 'none';"
                     style="
@@ -144,9 +146,11 @@
                     </p>
                     <div style="display: flex; gap: 12px;">
                         <!-- Confirm button — HTMX posts to trigger_destroy and shows the log terminal -->
+                        <!-- hx-swap="none": keep the button label instead of replacing it with the JSON response -->
                         <button
                             hx-post="{% url 'deploy_trigger' %}"
                             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            hx-swap="none"
                             hx-on::after-request="document.getElementById('log-terminal').style.display='block'; document.getElementById('confirm-panel').style.display='none'; document.getElementById('busy-msg').style.display = event.detail.xhr.status === 409 ? 'block' : 'none';"
                             style="
                                 background: var(--accent-red);
