@@ -48,9 +48,55 @@
             </div>
         </div>
 
-        <!-- Destruction button — only rendered for admin users -->
-        <!-- Hiding it in the template AND checking in the view = two layers of protection -->
+        <!-- On-demand backup + destruction buttons — only rendered for admin users -->
+        <!-- Hiding them in the template AND checking in the view = two layers of protection -->
         {% if request.user.is_staff %}
+        <div class="mb-8">
+            <p style="color: var(--text-muted); font-size: 10px; letter-spacing: 3px; margin-bottom: 12px;">
+                // DATABASE BACKUP
+            </p>
+            <div style="
+                background: var(--bg-surface);
+                border: 1px solid var(--border);
+                border-left: 3px solid var(--accent-blue);
+                padding: 24px;
+            ">
+                <p style="color: var(--accent-blue); font-size: 11px; letter-spacing: 2px; margin-bottom: 8px;">
+                    💾 ON-DEMAND BACKUP
+                </p>
+                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px;">
+                    Dumps The Survivor's database and uploads it to the Hetzner Storage Box.
+                    Backups also run every hour — force one right before a disaster recovery
+                    so no recent change is lost.
+                </p>
+
+                <!-- No confirmation step: a backup destroys nothing, it only refreshes the latest copy -->
+                <!-- hx-disabled-elt disables the button while the request is being sent (no double clicks) -->
+                <!-- After the request: show the log terminal, and the busy warning only on 409 Conflict -->
+                <button
+                    hx-post="{% url 'deploy_backup' %}"
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                    hx-disabled-elt="this"
+                    hx-on::after-request="document.getElementById('log-terminal').style.display='block'; document.getElementById('busy-msg').style.display = event.detail.xhr.status === 409 ? 'block' : 'none';"
+                    style="
+                        background: transparent;
+                        border: 2px solid var(--accent-blue);
+                        color: var(--accent-blue);
+                        font-family: var(--mono);
+                        font-size: 13px;
+                        letter-spacing: 3px;
+                        padding: 12px 32px;
+                        cursor: pointer;
+                        text-transform: uppercase;
+                    "
+                    onmouseover="this.style.background='rgba(0,136,255,0.1)'"
+                    onmouseout="this.style.background='transparent'"
+                >
+                    💾 FORCE BACKUP NOW
+                </button>
+            </div>
+        </div>
+
         <div class="mb-8">
             <p style="color: var(--text-muted); font-size: 10px; letter-spacing: 3px; margin-bottom: 12px;">
                 // DISASTER RECOVERY
@@ -101,7 +147,7 @@
                         <button
                             hx-post="{% url 'deploy_trigger' %}"
                             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                            hx-on::after-request="document.getElementById('log-terminal').style.display='block'; document.getElementById('confirm-panel').style.display='none';"
+                            hx-on::after-request="document.getElementById('log-terminal').style.display='block'; document.getElementById('confirm-panel').style.display='none'; document.getElementById('busy-msg').style.display = event.detail.xhr.status === 409 ? 'block' : 'none';"
                             style="
                                 background: var(--accent-red);
                                 border: none;
@@ -137,10 +183,14 @@
         </div>
         {% endif %}
 
-        <!-- Log terminal — hidden until disaster recovery starts -->
+        <!-- Log terminal — hidden until a backup or disaster recovery starts -->
         <div id="log-terminal" style="display: none; margin-bottom: 32px;">
             <p style="color: var(--text-muted); font-size: 10px; letter-spacing: 3px; margin-bottom: 12px;">
                 // LIVE OPERATION LOG
+            </p>
+            <!-- Shown only when the server answers 409: another backup or DR is still running -->
+            <p id="busy-msg" style="display: none; color: var(--accent-red); font-size: 12px; margin-bottom: 8px;">
+                ⚠️  Another operation is already running — wait for it to finish (see the log below).
             </p>
             <div style="
                 background: #000;

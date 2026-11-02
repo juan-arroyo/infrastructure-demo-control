@@ -8,4 +8,6 @@ urlpatterns = [
     # POST /deploy/trigger/ — starts the disaster recovery sequence
     # GET requests are blocked by @require_POST — prevents accidental triggers
     path('trigger/', views.trigger_destroy, name='deploy_trigger'),
+    # POST /deploy/backup/ — forces an on-demand database backup to the Storage Box
+    path('backup/', views.trigger_backup, name='deploy_backup'),
 ]
