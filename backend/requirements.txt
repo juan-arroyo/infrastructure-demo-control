@@ -1,6 +1,10 @@
 Django==5.1.4
 channels==4.1.0
 channels-redis==4.2.0
+# Pinned: channels-redis does not pin redis-py itself, and redis-py 8.x breaks it
+# (idle WebSocket consumers crash after 5 s with "Timeout reading from redis:6379").
+# Tested OK with 5.2.1, 6.4.0, 7.0.1, 7.1.0 and 7.4.1; broken with 8.0.0 and 8.1.0.
+redis==7.4.1
 daphne==4.1.2
 hcloud==2.3.0
 ansible-runner==2.4.0
